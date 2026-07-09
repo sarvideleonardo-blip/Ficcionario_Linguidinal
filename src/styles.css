@@ -144,3 +144,534 @@
     color: var(--color-foreground);
   }
 }
+
+/* ============================================================
+   MSN Messenger / Windows XP 1999–2001 aesthetic
+   ============================================================ */
+
+:root {
+  --msn-blue-dark: #0a246a;
+  --msn-blue: #245edb;
+  --msn-blue-light: #3a7ff2;
+  --msn-aqua: #8ec7ff;
+  --msn-cream: #ece9d8;
+  --msn-panel: #ffffff;
+  --msn-shadow-in: inset 1px 1px 0 #7b9ebd, inset -1px -1px 0 #d4e3f0;
+  --msn-shadow-out: 1px 1px 0 #0a246a;
+}
+
+.msn-page {
+  min-height: 100vh;
+  padding: 24px 16px;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #b7d4ff 0%, transparent 60%),
+    radial-gradient(900px 500px at 110% 110%, #cfe4ff 0%, transparent 60%),
+    linear-gradient(180deg, #4a8be0 0%, #2762c7 60%, #1e4fb0 100%);
+  font-family: "Tahoma", "Trebuchet MS", "Segoe UI", sans-serif;
+  font-size: 13px;
+  color: #111;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.msn-window {
+  width: 100%;
+  max-width: 920px;
+  background: var(--msn-cream);
+  border-radius: 8px 8px 4px 4px;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.35),
+    0 0 0 1px #0a246a;
+  overflow: hidden;
+}
+
+.msn-auth-window {
+  max-width: 420px;
+}
+
+.msn-titlebar {
+  background: linear-gradient(180deg, #0058e6 0%, #1e70ee 8%, #245edb 40%, #0f47b8 100%);
+  color: #fff;
+  padding: 4px 6px 4px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid #0a246a;
+}
+
+.msn-titlebar-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.msn-title-icon {
+  font-size: 14px;
+}
+
+.msn-titlebar-buttons {
+  display: flex;
+  gap: 2px;
+}
+
+.msn-tb-btn {
+  width: 22px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #4d8de6, #245edb);
+  border: 1px solid #0a246a;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.msn-tb-close {
+  background: linear-gradient(180deg, #ee6a5a, #c33a2b);
+}
+
+.msn-body {
+  background: #f5f4ea;
+  padding: 16px;
+}
+
+.msn-statusbar {
+  background: linear-gradient(180deg, #ece9d8 0%, #d6d2b8 100%);
+  border-top: 1px solid #a09678;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.msn-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3ecf3e;
+  box-shadow: 0 0 4px #3ecf3e, inset -1px -1px 0 rgba(0, 0, 0, 0.3);
+  display: inline-block;
+}
+
+.msn-status-link {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #0a246a;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* Tabs */
+.msn-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 8px 0 8px;
+  background: linear-gradient(180deg, #dfe7f7 0%, #c8d7ee 100%);
+  border-bottom: 1px solid #7b9ebd;
+}
+
+.msn-tab {
+  padding: 5px 12px;
+  background: linear-gradient(180deg, #f5f7fb 0%, #d5deee 100%);
+  border: 1px solid #7b9ebd;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  font: inherit;
+  font-size: 12px;
+  color: #0a246a;
+  cursor: pointer;
+  position: relative;
+  top: 1px;
+}
+
+.msn-tab-active {
+  background: #f5f4ea;
+  font-weight: 700;
+  top: 0;
+  padding-bottom: 6px;
+  z-index: 1;
+}
+
+/* Form controls */
+.msn-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.msn-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #333;
+  font-weight: 600;
+}
+
+.msn-input {
+  padding: 5px 8px;
+  background: #fff;
+  border: 1px solid #7b9ebd;
+  box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.08);
+  border-radius: 2px;
+  font: inherit;
+  font-size: 13px;
+  color: #111;
+  outline: none;
+}
+
+.msn-input:focus {
+  border-color: #245edb;
+  box-shadow: 0 0 0 2px rgba(36, 94, 219, 0.25);
+}
+
+.msn-textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+
+.msn-search {
+  margin-left: auto;
+  width: 160px;
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+/* Buttons */
+.msn-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(180deg, #fdfdfd 0%, #d5dde8 100%);
+  border: 1px solid #7b9ebd;
+  border-radius: 4px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0a246a;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 #fff, 0 1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.msn-btn:hover {
+  background: linear-gradient(180deg, #fff 0%, #c9d7ea 100%);
+  border-color: #245edb;
+}
+
+.msn-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.msn-btn-primary {
+  background: linear-gradient(180deg, #5ea1ef 0%, #245edb 100%);
+  color: #fff;
+  border-color: #0a246a;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.msn-btn-primary:hover {
+  background: linear-gradient(180deg, #7ab8fb 0%, #2f6ce5 100%);
+}
+
+.msn-btn-google {
+  width: 100%;
+  background: #fff;
+  color: #333;
+}
+
+.msn-google-g {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, #4285f4, #ea4335 33%, #fbbc05 66%, #34a853);
+  color: #fff;
+  font-weight: 900;
+  font-size: 12px;
+}
+
+.msn-mini-btn {
+  margin-left: 6px;
+  padding: 1px 6px;
+  font-size: 11px;
+  background: linear-gradient(180deg, #fff, #d5dde8);
+  border: 1px solid #7b9ebd;
+  border-radius: 3px;
+  cursor: pointer;
+  color: #0a246a;
+}
+
+/* Auth extras */
+.msn-hero {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 10px;
+  background: linear-gradient(180deg, #eaf2ff, #d3e3ff);
+  border: 1px solid #a9c1e5;
+  border-radius: 4px;
+}
+
+.msn-hero-icon {
+  font-size: 32px;
+}
+
+.msn-hero-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0a246a;
+  margin: 0;
+}
+
+.msn-hero-sub {
+  font-size: 12px;
+  color: #444;
+  margin: 2px 0 0 0;
+}
+
+.msn-sep {
+  text-align: center;
+  font-size: 11px;
+  color: #666;
+  margin: 12px 0;
+  position: relative;
+}
+
+.msn-sep::before,
+.msn-sep::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 40%;
+  height: 1px;
+  background: #b8b8a8;
+}
+
+.msn-sep::before { left: 0; }
+.msn-sep::after { right: 0; }
+
+.msn-switch {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 12px;
+  color: #444;
+}
+
+.msn-link {
+  background: none;
+  border: none;
+  color: #0a246a;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+/* Two column layout */
+.msn-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 12px;
+}
+
+@media (max-width: 720px) {
+  .msn-two-col { grid-template-columns: 1fr; }
+}
+
+.msn-panel {
+  background: #fff;
+  border: 1px solid #a9c1e5;
+  border-radius: 4px;
+  padding: 12px;
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+.msn-panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0a246a;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px dashed #a9c1e5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.msn-hint {
+  font-size: 12px;
+  color: #555;
+  margin: 0 0 10px 0;
+}
+
+/* Word list */
+.msn-list {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.msn-empty {
+  text-align: center;
+  color: #888;
+  padding: 24px;
+  font-style: italic;
+}
+
+.msn-group {
+  margin-bottom: 12px;
+}
+
+.msn-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.msn-group-count {
+  font-size: 11px;
+  color: #888;
+}
+
+.msn-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  background: linear-gradient(180deg, #ffd76a, #ffa726);
+  border: 1px solid #b8860b;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4a2c00;
+  text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.msn-word {
+  padding: 6px 8px;
+  background: linear-gradient(180deg, #f7faff, #eaf1fb);
+  border: 1px solid #d3e0f2;
+  border-radius: 3px;
+  margin-bottom: 4px;
+  position: relative;
+}
+
+.msn-word-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.msn-word-name {
+  color: #0a246a;
+  font-size: 13px;
+}
+
+.msn-word-def {
+  font-size: 12px;
+  color: #333;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.msn-word-ex {
+  font-size: 11px;
+  color: #6c5b8a;
+  font-style: italic;
+  margin-top: 3px;
+}
+
+.msn-x {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.msn-x:hover {
+  color: #c33a2b;
+}
+
+/* AI output */
+.msn-output {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: linear-gradient(180deg, #fffdf0, #fbf3d4);
+  border: 1px solid #e0c97a;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #2a2410;
+  white-space: normal;
+}
+
+.msn-output p { margin: 0 0 8px 0; }
+.msn-output ul { margin: 4px 0 8px 20px; }
+.msn-output li { margin: 2px 0; }
+.msn-output strong { color: #0a246a; }
+.msn-output em {
+  color: #a05a00;
+  font-style: italic;
+  background: rgba(255, 200, 100, 0.35);
+  padding: 0 3px;
+  border-radius: 2px;
+}
+.msn-output h2, .msn-output h3, .msn-output h4 {
+  margin: 8px 0 4px 0;
+  color: #0a246a;
+  font-size: 13px;
+}
+
+.msn-poem {
+  font-family: "Georgia", "Palatino", serif;
+  font-size: 15px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+/* Radio pill row */
+.msn-radio-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.msn-radio {
+  padding: 4px 10px;
+  border: 1px solid #7b9ebd;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fff, #dae4f2);
+  font-size: 12px;
+  color: #0a246a;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.msn-radio input { display: none; }
+
+.msn-radio-on {
+  background: linear-gradient(180deg, #5ea1ef, #245edb);
+  color: #fff;
+  border-color: #0a246a;
+}
