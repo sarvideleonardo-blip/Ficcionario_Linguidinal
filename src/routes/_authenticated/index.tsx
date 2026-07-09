@@ -322,6 +322,8 @@ function ExploreTab() {
   const [palabra, setPalabra] = useState("");
   const [hint, setHint] = useState("");
   const [result, setResult] = useState("");
+  const [mode, setMode] = useState<"new" | "expand" | null>(null);
+  const [existing, setExisting] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const explore = useServerFn(exploreMeanings);
 
@@ -329,9 +331,13 @@ function ExploreTab() {
     if (!palabra.trim()) return;
     setLoading(true);
     setResult("");
+    setMode(null);
+    setExisting(null);
     try {
       const r = await explore({ data: { palabra, hint } });
       setResult(r.text);
+      setMode((r as any).mode ?? "new");
+      setExisting((r as any).existing ?? null);
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -343,13 +349,14 @@ function ExploreTab() {
     <div className="msn-panel">
       <div className="msn-panel-title">✨ Explorar significados posibles</div>
       <p className="msn-hint">
-        Dame una palabra nueva y la IA propondrá varios significados posibles usando el
-        contexto de tu diccionario.
+        Si la palabra <strong>ya está</strong> en tu diccionario, la IA respeta su
+        significado y propone nuevos contextos/matices. Si es <strong>nueva</strong>,
+        propone significados posibles.
       </p>
       <div className="msn-form">
         <input
           className="msn-input"
-          placeholder="palabra nueva..."
+          placeholder="palabra (nueva o existente)..."
           value={palabra}
           onChange={(e) => setPalabra(e.target.value)}
         />
@@ -363,6 +370,22 @@ function ExploreTab() {
           {loading ? "pensando..." : "🔮 Explorar"}
         </button>
       </div>
+      {mode === "expand" && existing && (
+        <div
+          style={{
+            marginTop: 10,
+            padding: "6px 10px",
+            background: "#eaf2ff",
+            border: "1px solid #a9c1e5",
+            borderRadius: 3,
+            fontSize: 12,
+            color: "#0a246a",
+          }}
+        >
+          🔒 <strong>{existing.palabra}</strong> ya existe — su significado no se
+          modifica, solo se amplían contextos.
+        </div>
+      )}
       {result && <div className="msn-output">{renderMarkdown(result)}</div>}
     </div>
   );
