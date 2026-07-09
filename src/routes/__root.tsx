@@ -77,19 +77,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Mi Diccionario Privado" },
+      { title: "Ficcionario Linguidinal" },
       {
         name: "description",
         content:
           "Un diccionario íntimo para inventar palabras, explorar significados, traducir textos y componer haikus en tu idioma propio.",
       },
-      { property: "og:title", content: "Mi Diccionario Privado" },
+      { property: "og:title", content: "Ficcionario Linguidinal" },
       {
         property: "og:description",
-        content: "Inventa palabras, tradúcelas y haz haikus en tu idioma propio.",
+        content: "Un diccionario íntimo para inventar palabras, explorar significados, traducir textos y componer haikus en tu idioma propio.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Ficcionario Linguidinal" },
+      { name: "twitter:description", content: "Un diccionario íntimo para inventar palabras, explorar significados, traducir textos y componer haikus en tu idioma propio." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/af67fad5-77ff-4d39-88e5-8301de120364" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/af67fad5-77ff-4d39-88e5-8301de120364" },
     ],
     links: [
       {
