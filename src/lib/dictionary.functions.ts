@@ -56,11 +56,16 @@ export const exploreMeanings = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const dict = await fetchDictionary(context.supabase, context.userId);
     const provider = gateway();
-    const { text } = await generateText({
-      model: provider(MODEL),
-      prompt: `Eres cómplice poético de un idioma privado en construcción. La persona propone una palabra nueva y quiere explorar sus significados posibles.\n\nDiccionario existente:\n${dictionaryToPrompt(dict)}\n\nPalabra nueva: "${data.palabra}"\n${data.hint ? `Pista: ${data.hint}` : ""}\n\nProponme 4-6 significados distintos y evocadores para esta palabra. Cada uno con:\n• un matiz (concreto / abstracto / emocional / técnico / mítico)\n• una definición de 1-2 frases\n• un ejemplo brevísimo de uso\n\nTono: íntimo, curioso, ligero. Español. Formato markdown con viñetas.`,
-    });
-    return { text };
+    const existing = dict.find(
+      (d: any) => d.palabra.toLowerCase().trim() === data.palabra.toLowerCase().trim(),
+    );
+
+    const prompt = existing
+      ? `Eres cómplice poético de un idioma privado. La persona ya tiene esta palabra definida y quiere EXPANDIRLA sin modificar su significado base.\n\nPalabra: "${existing.palabra}"\nDefinición existente (NO la cambies, respétala como base): ${existing.definicion || "(sin definición escrita, pero la persona ya la considera suya)"}\nCategoría: ${existing.categoria}\n${existing.ejemplos ? `Ejemplo previo: ${existing.ejemplos}` : ""}\n\nResto del diccionario para contexto:\n${dictionaryToPrompt(dict.filter((d: any) => d !== existing))}\n${data.hint ? `\nPista de la persona: ${data.hint}` : ""}\n\nManteniendo intacto el significado original, propón 4-6 EXTENSIONES:\n• un contexto o registro nuevo (íntimo / cotidiano / técnico / mítico / conversacional / poético)\n• un matiz o derivación (verbo, adjetivo, uso metafórico, etc.)\n• un ejemplo breve donde se aprecie ese matiz\n\nNo redefinas la palabra: amplía su rango de uso. Español, tono íntimo. Markdown con viñetas.`
+      : `Eres cómplice poético de un idioma privado en construcción. La persona propone una palabra NUEVA (no está en el diccionario) y quiere explorar sus significados posibles.\n\nDiccionario existente para contexto:\n${dictionaryToPrompt(dict)}\n\nPalabra nueva: "${data.palabra}"\n${data.hint ? `Pista: ${data.hint}` : ""}\n\nProponme 4-6 significados distintos y evocadores para esta palabra. Cada uno con:\n• un matiz (concreto / abstracto / emocional / técnico / mítico)\n• una definición de 1-2 frases\n• un ejemplo brevísimo de uso\n\nTono: íntimo, curioso, ligero. Español. Formato markdown con viñetas.`;
+
+    const { text } = await generateText({ model: provider(MODEL), prompt });
+    return { text, mode: existing ? "expand" : "new", existing: existing ?? null };
   });
 
 export const translateToLanguage = createServerFn({ method: "POST" })
