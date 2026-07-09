@@ -1,0 +1,103 @@
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { generateText } from "ai";
+import { z } from "zod";
+import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+
+const MODEL = "google/gemini-2.5-flash";
+
+function gateway() {
+  const key = process.env.LOVABLE_API_KEY;
+  if (!key) throw new Error("Falta LOVABLE_API_KEY");
+  return createLovableAiGatewayProvider(key);
+}
+
+async function fetchDictionary(supabase: any, userId: string) {
+  const { data } = await supabase
+    .from("palabras")
+    .select("palabra, definicion, categoria, ejemplos")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  return data ?? [];
+}
+
+function dictionaryToPrompt(dict: any[]) {
+  if (!dict.length) return "(el diccionario está vacío todavía)";
+  return dict
+    .map(
+      (d) =>
+        `- ${d.palabra} [${d.categoria}]: ${d.definicion}${
+          d.ejemplos ? ` | Ej: ${d.ejemplos}` : ""
+        }`,
+    )
+    .join("\n");
+}
+
+export const suggestCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ palabra: z.string().min(1), definicion: z.string().default("") }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const provider = gateway();
+    const { text } = await generateText({
+      model: provider(MODEL),
+      prompt: `Devuelve UNA sola categoría corta (1-2 palabras, en minúsculas, sin comillas ni puntuación) para esta palabra inventada.\nPalabra: ${data.palabra}\nDefinición: ${data.definicion || "(vacía)"}\n\nEjemplos de categorías: emoción, objeto, verbo, tiempo, cuerpo, relación, sonido, lugar, sensación, filosófico.\n\nResponde SOLO con la categoría.`,
+    });
+    return { categoria: text.trim().toLowerCase().replace(/[^\p{L}\s-]/gu, "").slice(0, 40) };
+  });
+
+export const exploreMeanings = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ palabra: z.string().min(1), hint: z.string().default("") }).parse(input),
+  )
+  .handler(async ({ context, data }) => {
+    const dict = await fetchDictionary(context.supabase, context.userId);
+    const provider = gateway();
+    const { text } = await generateText({
+      model: provider(MODEL),
+      prompt: `Eres cómplice poético de un idioma privado en construcción. La persona propone una palabra nueva y quiere explorar sus significados posibles.\n\nDiccionario existente:\n${dictionaryToPrompt(dict)}\n\nPalabra nueva: "${data.palabra}"\n${data.hint ? `Pista: ${data.hint}` : ""}\n\nProponme 4-6 significados distintos y evocadores para esta palabra. Cada uno con:\n• un matiz (concreto / abstracto / emocional / técnico / mítico)\n• una definición de 1-2 frases\n• un ejemplo brevísimo de uso\n\nTono: íntimo, curioso, ligero. Español. Formato markdown con viñetas.`,
+    });
+    return { text };
+  });
+
+export const translateToLanguage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ texto: z.string().min(1) }).parse(input),
+  )
+  .handler(async ({ context, data }) => {
+    const dict = await fetchDictionary(context.supabase, context.userId);
+    const provider = gateway();
+    const { text } = await generateText({
+      model: provider(MODEL),
+      prompt: `Eres traductora al idioma privado de esta persona. Usa SOLO palabras del diccionario cuando encajen semánticamente; para el resto conserva español natural. Prioriza sustituir sustantivos, verbos y emociones clave. No inventes palabras nuevas fuera del diccionario.\n\nDiccionario:\n${dictionaryToPrompt(dict)}\n\nTexto original:\n${data.texto}\n\nDevuélveme:\n1. **Versión traducida** (el texto mutado con las palabras del diccionario en cursivas *así*).\n2. **Glosario** de las palabras del diccionario que usaste, con su definición.\n\nNo agregues nada más.`,
+    });
+    return { text };
+  });
+
+export const makeHaiku = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      tema: z.string().default(""),
+      forma: z.enum(["haiku", "mini-poema", "aforismo"]).default("haiku"),
+    }).parse(input),
+  )
+  .handler(async ({ context, data }) => {
+    const dict = await fetchDictionary(context.supabase, context.userId);
+    const provider = gateway();
+    const forma =
+      data.forma === "haiku"
+        ? "un haiku (3 líneas, 5-7-5 sílabas aproximadas)"
+        : data.forma === "aforismo"
+          ? "un aforismo de una sola línea"
+          : "un mini-poema de 4 a 6 líneas breves";
+    const { text } = await generateText({
+      model: provider(MODEL),
+      prompt: `Escribe ${forma} usando al menos 2 palabras del diccionario privado. Ponlas en *cursivas*.\n\nDiccionario:\n${dictionaryToPrompt(dict)}\n\nTema o semilla: ${data.tema || "(libre)"}\n\nAl final, en una línea aparte muy breve, glosa entre paréntesis las palabras inventadas que usaste.`,
+    });
+    return { text };
+  });
