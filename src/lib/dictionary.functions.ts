@@ -6,6 +6,62 @@ import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 const MODEL = "google/gemini-2.5-flash";
 
+export const bulkImportPalabras = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({
+      items: z
+        .array(
+          z.object({
+            palabra: z.string().min(1),
+            definicion: z.string().default(""),
+            categoria: z.string().default("sin categoría"),
+            ejemplos: z.string().default(""),
+          }),
+        )
+        .min(1)
+        .max(1000),
+    }).parse(input),
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const { data: existing } = await supabase
+      .from("palabras")
+      .select("palabra")
+      .eq("user_id", userId);
+    const existingSet = new Set(
+      (existing ?? []).map((r: any) => r.palabra.toLowerCase().trim()),
+    );
+    const seen = new Set<string>();
+    const toInsert: any[] = [];
+    let skipped = 0;
+    for (const it of data.items) {
+      const key = it.palabra.toLowerCase().trim();
+      if (existingSet.has(key) || seen.has(key)) {
+        skipped++;
+        continue;
+      }
+      seen.add(key);
+      toInsert.push({
+        user_id: userId,
+        palabra: it.palabra.trim(),
+        definicion: it.definicion,
+        categoria: it.categoria || "sin categoría",
+        ejemplos: it.ejemplos,
+      });
+    }
+    if (toInsert.length === 0) return { inserted: 0, skipped };
+    // batch inserts to avoid payload limits
+    let inserted = 0;
+    for (let i = 0; i < toInsert.length; i += 100) {
+      const chunk = toInsert.slice(i, i + 100);
+      const { error } = await supabase.from("palabras").insert(chunk);
+      if (error) throw new Error(error.message);
+      inserted += chunk.length;
+    }
+    return { inserted, skipped };
+  });
+
 function gateway() {
   const key = process.env.LOVABLE_API_KEY;
   if (!key) throw new Error("Falta LOVABLE_API_KEY");
