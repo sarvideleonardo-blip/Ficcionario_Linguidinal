@@ -7,7 +7,9 @@ import {
   exploreMeanings,
   translateToLanguage,
   makeHaiku,
+  bulkImportPalabras,
 } from "@/lib/dictionary.functions";
+import { CURAEIDON_LEXICON } from "@/lib/curaeidon-lexicon";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -131,6 +133,22 @@ function DictionaryTab({
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState("");
   const suggest = useServerFn(suggestCategory);
+  const bulkImport = useServerFn(bulkImportPalabras);
+  const [importing, setImporting] = useState(false);
+
+  async function handleBulkImport() {
+    if (!confirm(`Importar ${CURAEIDON_LEXICON.length} palabras del lexicón Curaeidon?`)) return;
+    setImporting(true);
+    try {
+      const r = await bulkImport({ data: { items: CURAEIDON_LEXICON } });
+      toast.success(`Importadas ${r.inserted} · saltadas ${r.skipped} (duplicadas)`);
+      onReload();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setImporting(false);
+    }
+  }
 
   const categorias = useMemo(() => {
     const s = new Set(palabras.map((p) => p.categoria));
@@ -267,6 +285,15 @@ function DictionaryTab({
           </label>
           <button type="submit" disabled={saving} className="msn-btn msn-btn-primary">
             {saving ? "guardando..." : "＋ Agregar al diccionario"}
+          </button>
+          <button
+            type="button"
+            onClick={handleBulkImport}
+            disabled={importing}
+            className="msn-btn"
+            style={{ marginTop: 6 }}
+          >
+            {importing ? "importando..." : "📥 Importar lexicón completo"}
           </button>
         </form>
       </div>
