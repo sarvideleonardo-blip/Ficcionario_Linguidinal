@@ -4,7 +4,59 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
-const MODEL = "google/gemini-2.5-flash";
+const MODEL = "google/gemini-3.6-flash";
+
+/** Guarda cada interacción para que el sistema aprenda de nosotros. */
+async function logBitacora(
+  supabase: any,
+  userId: string,
+  tipo: string,
+  entrada: string,
+  salida: string,
+) {
+  try {
+    await supabase.from("bitacora").insert({
+      user_id: userId,
+      tipo,
+      entrada: entrada.slice(0, 4000),
+      salida: salida.slice(0, 8000),
+    });
+  } catch {
+    /* el log nunca debe romper la experiencia */
+  }
+}
+
+/** Memoria reciente: qué hemos hecho y qué ya respondió la IA (para no repetirse). */
+async function fetchBitacora(supabase: any, userId: string, tipo?: string, limit = 8) {
+  let q = supabase
+    .from("bitacora")
+    .select("tipo, entrada, salida, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (tipo) q = q.eq("tipo", tipo);
+  const { data } = await q;
+  return data ?? [];
+}
+
+function antiRepeat(prev: any[]) {
+  if (!prev.length) return "";
+  const chunks = prev
+    .map((b, i) => `--- respuesta previa #${i + 1} (${b.entrada.slice(0, 60)}) ---\n${String(b.salida).slice(0, 700)}`)
+    .join("\n");
+  return `\n\nMEMORIA — ya dijiste esto antes. NO lo repitas, ni sus imágenes, ni su estructura, ni sus ejemplos. Busca un ángulo claramente distinto:\n${chunks}\n`;
+}
+
+function seed() {
+  return `\n\n[semilla de variación: ${Math.random().toString(36).slice(2, 10)} — usa un enfoque distinto al obvio]`;
+}
+
+function styleMemory(prev: any[]) {
+  if (!prev.length) return "";
+  return `\n\nAPRENDIZAJE: estas son cosas recientes que esta persona escribió. Absorbe su tono, obsesiones y ritmo; escribe como alguien que la conoce:\n${prev
+    .map((b) => `• [${b.tipo}] ${String(b.entrada).slice(0, 200)}`)
+    .join("\n")}\n`;
+}
 
 export const bulkImportPalabras = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
