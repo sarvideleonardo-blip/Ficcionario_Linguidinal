@@ -163,6 +163,7 @@ export const exploreMeanings = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const dict = await fetchDictionary(context.supabase, context.userId);
+    const prev = await fetchBitacora(context.supabase, context.userId, "explorar", 5);
     const provider = gateway();
     const existing = dict.find(
       (d: any) => d.palabra.toLowerCase().trim() === data.palabra.toLowerCase().trim(),
@@ -172,7 +173,20 @@ export const exploreMeanings = createServerFn({ method: "POST" })
       ? `Eres cómplice poético de un idioma privado. La persona ya tiene esta palabra definida y quiere EXPANDIRLA sin modificar su significado base.\n\nPalabra: "${existing.palabra}"\nDefinición existente (NO la cambies, respétala como base): ${existing.definicion || "(sin definición escrita, pero la persona ya la considera suya)"}\nCategoría: ${existing.categoria}\n${existing.ejemplos ? `Ejemplo previo: ${existing.ejemplos}` : ""}\n\nResto del diccionario para contexto:\n${dictionaryToPrompt(dict.filter((d: any) => d !== existing))}\n${data.hint ? `\nPista de la persona: ${data.hint}` : ""}\n\nManteniendo intacto el significado original, propón 4-6 EXTENSIONES:\n• un contexto o registro nuevo (íntimo / cotidiano / técnico / mítico / conversacional / poético)\n• un matiz o derivación (verbo, adjetivo, uso metafórico, etc.)\n• un ejemplo breve donde se aprecie ese matiz\n\nNo redefinas la palabra: amplía su rango de uso. Español, tono íntimo. Markdown con viñetas.`
       : `Eres cómplice poético de un idioma privado en construcción. La persona propone una palabra NUEVA (no está en el diccionario) y quiere explorar sus significados posibles.\n\nDiccionario existente para contexto:\n${dictionaryToPrompt(dict)}\n\nPalabra nueva: "${data.palabra}"\n${data.hint ? `Pista: ${data.hint}` : ""}\n\nProponme 4-6 significados distintos y evocadores para esta palabra. Cada uno con:\n• un matiz (concreto / abstracto / emocional / técnico / mítico)\n• una definición de 1-2 frases\n• un ejemplo brevísimo de uso\n\nTono: íntimo, curioso, ligero. Español. Formato markdown con viñetas.`;
 
-    const { text } = await generateText({ model: provider(MODEL), prompt });
+    const { text } = await generateText({
+      model: provider(MODEL),
+      prompt:
+        prompt +
+        antiRepeat(prev.filter((p: any) => String(p.entrada).startsWith(data.palabra))) +
+        seed(),
+    });
+    await logBitacora(
+      context.supabase,
+      context.userId,
+      "explorar",
+      `${data.palabra} ${data.hint}`,
+      text,
+    );
     return { text, mode: existing ? "expand" : "new", existing: existing ?? null };
   });
 
@@ -183,11 +197,13 @@ export const translateToLanguage = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const dict = await fetchDictionary(context.supabase, context.userId);
+    const prev = await fetchBitacora(context.supabase, context.userId, "traducir", 4);
     const provider = gateway();
     const { text } = await generateText({
       model: provider(MODEL),
-      prompt: `Eres traductora al idioma privado de esta persona. Usa SOLO palabras del diccionario cuando encajen semánticamente; para el resto conserva español natural. Prioriza sustituir sustantivos, verbos y emociones clave. No inventes palabras nuevas fuera del diccionario.\n\nDiccionario:\n${dictionaryToPrompt(dict)}\n\nTexto original:\n${data.texto}\n\nDevuélveme:\n1. **Versión traducida** (el texto mutado con las palabras del diccionario en cursivas *así*).\n2. **Glosario** de las palabras del diccionario que usaste, con su definición.\n\nNo agregues nada más.`,
+      prompt: `Eres traductora al idioma privado de esta persona.${styleMemory(prev)} Usa SOLO palabras del diccionario cuando encajen semánticamente; para el resto conserva español natural. Prioriza sustituir sustantivos, verbos y emociones clave. No inventes palabras nuevas fuera del diccionario.\n\nDiccionario:\n${dictionaryToPrompt(dict)}\n\nTexto original:\n${data.texto}\n\nDevuélveme:\n1. **Versión traducida** (el texto mutado con las palabras del diccionario en cursivas *así*).\n2. **Glosario** de las palabras del diccionario que usaste, con su definición.\n\nNo agregues nada más.${seed()}`,
     });
+    await logBitacora(context.supabase, context.userId, "traducir", data.texto, text);
     return { text };
   });
 
@@ -201,6 +217,7 @@ export const makeHaiku = createServerFn({ method: "POST" })
   )
   .handler(async ({ context, data }) => {
     const dict = await fetchDictionary(context.supabase, context.userId);
+    const prev = await fetchBitacora(context.supabase, context.userId, "poema", 6);
     const provider = gateway();
     const forma =
       data.forma === "haiku"
@@ -210,7 +227,14 @@ export const makeHaiku = createServerFn({ method: "POST" })
           : "un mini-poema de 4 a 6 líneas breves";
     const { text } = await generateText({
       model: provider(MODEL),
-      prompt: `Escribe ${forma} usando al menos 2 palabras del diccionario privado. Ponlas en *cursivas*.\n\nDiccionario:\n${dictionaryToPrompt(dict)}\n\nTema o semilla: ${data.tema || "(libre)"}\n\nAl final, en una línea aparte muy breve, glosa entre paréntesis las palabras inventadas que usaste.`,
+      prompt: `Escribe ${forma} usando al menos 2 palabras del diccionario privado. Ponlas en *cursivas*. Elige palabras poco frecuentes del diccionario, no siempre las primeras de la lista.\n\nDiccionario:\n${dictionaryToPrompt(dict)}\n\nTema o semilla: ${data.tema || "(libre)"}\n\nAl final, en una línea aparte muy breve, glosa entre paréntesis las palabras inventadas que usaste.${styleMemory(prev)}${antiRepeat(prev)}${seed()}`,
     });
+    await logBitacora(
+      context.supabase,
+      context.userId,
+      "poema",
+      `${data.forma}: ${data.tema}`,
+      text,
+    );
     return { text };
   });
