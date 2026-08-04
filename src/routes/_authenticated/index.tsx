@@ -8,6 +8,8 @@ import {
   translateToLanguage,
   makeHaiku,
   bulkImportPalabras,
+  analyzeLongText,
+  proposeGames,
 } from "@/lib/dictionary.functions";
 import { CURAEIDON_LEXICON } from "@/lib/curaeidon-lexicon";
 import { toast } from "sonner";
@@ -26,7 +28,7 @@ type Palabra = {
   created_at: string;
 };
 
-type Tab = "diccionario" | "explorar" | "traducir" | "poemas";
+type Tab = "diccionario" | "ingesta" | "explorar" | "traducir" | "poemas" | "juegos";
 
 function DictionaryApp() {
   const navigate = useNavigate();
@@ -82,9 +84,11 @@ function DictionaryApp() {
           {(
             [
               ["diccionario", "📚 Diccionario"],
+              ["ingesta", "🧬 Ingesta masiva"],
               ["explorar", "✨ Explorar palabra"],
               ["traducir", "🔤 Traducir"],
               ["poemas", "🌙 Haikus"],
+              ["juegos", "🎲 Autocrecimiento"],
             ] as [Tab, string][]
           ).map(([id, label]) => (
             <button
@@ -104,6 +108,8 @@ function DictionaryApp() {
           {tab === "explorar" && <ExploreTab />}
           {tab === "traducir" && <TranslateTab />}
           {tab === "poemas" && <PoemsTab />}
+          {tab === "ingesta" && <IngestTab onReload={load} />}
+          {tab === "juegos" && <GamesTab />}
         </div>
 
         <div className="msn-statusbar">
@@ -521,6 +527,162 @@ function PoemsTab() {
 }
 
 // tiny markdown-ish renderer for bold, italics, bullets, headings, line breaks
+function IngestTab({ onReload }: { onReload: () => void }) {
+  const [texto, setTexto] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [repetidas, setRepetidas] = useState(0);
+  const [cands, setCands] = useState<
+    { palabra: string; definicion: string; categoria: string; ejemplos: string; on: boolean }[]
+  >([]);
+  const analyze = useServerFn(analyzeLongText);
+  const bulkImport = useServerFn(bulkImportPalabras);
+
+  async function go() {
+    if (texto.trim().length < 10) return;
+    setLoading(true);
+    setCands([]);
+    try {
+      const r = await analyze({ data: { texto } });
+      setRepetidas(r.repetidas);
+      setCands(r.nuevas.map((n: any) => ({ ...n, on: true })));
+      if (r.nuevas.length === 0) toast.info("No encontré palabras nuevas en ese texto.");
+      else toast.success(`${r.nuevas.length} palabras nuevas · ${r.repetidas} repetidas descartadas`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function save() {
+    const items = cands.filter((c) => c.on).map(({ on: _on, ...rest }) => rest);
+    if (!items.length) return;
+    setSaving(true);
+    try {
+      const r = await bulkImport({ data: { items } });
+      toast.success(`Guardadas ${r.inserted} · saltadas ${r.skipped}`);
+      setCands([]);
+      setTexto("");
+      onReload();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const selected = cands.filter((c) => c.on).length;
+
+  return (
+    <div className="msn-panel">
+      <div className="msn-panel-title">🧬 Ingesta masiva de texto</div>
+      <p className="msn-hint">
+        Pega un texto largo (notas, poemas, conversaciones). La IA detecta las palabras
+        inventadas, las define desde el contexto, las categoriza y elimina repeticiones y
+        las que ya tienes.
+      </p>
+      <textarea
+        className="msn-input msn-textarea"
+        rows={10}
+        placeholder="Pega aquí todo de golpe..."
+        value={texto}
+        onChange={(e) => setTexto(e.target.value)}
+      />
+      <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center" }}>
+        <button className="msn-btn msn-btn-primary" onClick={go} disabled={loading}>
+          {loading ? "analizando..." : "🔍 Analizar texto"}
+        </button>
+        <span className="msn-hint" style={{ margin: 0 }}>
+          {texto.length.toLocaleString()} caracteres
+        </span>
+      </div>
+
+      {cands.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div className="msn-panel-title">
+            Candidatas ({selected}/{cands.length}) · {repetidas} descartadas por repetidas
+          </div>
+          <div className="msn-list" style={{ maxHeight: 340, overflowY: "auto" }}>
+            {cands.map((c, i) => (
+              <div key={c.palabra + i} className="msn-word">
+                <div className="msn-word-head">
+                  <label style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <input
+                      type="checkbox"
+                      checked={c.on}
+                      onChange={() =>
+                        setCands((prev) =>
+                          prev.map((x, j) => (j === i ? { ...x, on: !x.on } : x)),
+                        )
+                      }
+                    />
+                    <strong className="msn-word-name">{c.palabra}</strong>
+                  </label>
+                  <span className="msn-tag">{c.categoria}</span>
+                </div>
+                {c.definicion && <div className="msn-word-def">{c.definicion}</div>}
+                {c.ejemplos && <div className="msn-word-ex">« {c.ejemplos} »</div>}
+              </div>
+            ))}
+          </div>
+          <button
+            className="msn-btn msn-btn-primary"
+            onClick={save}
+            disabled={saving || selected === 0}
+            style={{ marginTop: 8 }}
+          >
+            {saving ? "guardando..." : `＋ Agregar ${selected} al diccionario`}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GamesTab() {
+  const [nota, setNota] = useState("");
+  const [result, setResult] = useState("");
+  const [loading, setLoading] = useState(false);
+  const propose = useServerFn(proposeGames);
+
+  async function go() {
+    setLoading(true);
+    setResult("");
+    try {
+      const r = await propose({ data: { nota } });
+      setResult(r.text);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="msn-panel">
+      <div className="msn-panel-title">🎲 Autocrecimiento del idioma</div>
+      <p className="msn-hint">
+        El sistema guarda memoria de todo lo que hacemos aquí y propone juegos nuevos,
+        rituales y direcciones de crecimiento para tu léxico. Cada vez propone cosas
+        distintas: nunca repite lo que ya te dijo.
+      </p>
+      <div className="msn-form">
+        <input
+          className="msn-input"
+          placeholder="opcional: qué se te antoja hoy (jugar con sonidos, con el duelo, con lo cotidiano...)"
+          value={nota}
+          onChange={(e) => setNota(e.target.value)}
+        />
+        <button className="msn-btn msn-btn-primary" onClick={go} disabled={loading}>
+          {loading ? "observando tu idioma..." : "🌱 Proponer juegos nuevos"}
+        </button>
+      </div>
+      {result && <div className="msn-output">{renderMarkdown(result)}</div>}
+    </div>
+  );
+}
+
 function renderMarkdown(text: string) {
   const html = text
     .replace(/&/g, "&amp;")

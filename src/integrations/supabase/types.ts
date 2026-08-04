@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      bitacora: {
+        Row: {
+          created_at: string
+          entrada: string
+          id: string
+          salida: string
+          tipo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entrada?: string
+          id?: string
+          salida?: string
+          tipo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entrada?: string
+          id?: string
+          salida?: string
+          tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       palabras: {
         Row: {
           categoria: string
