@@ -8,6 +8,8 @@ import {
   translateToLanguage,
   makeHaiku,
   bulkImportPalabras,
+  analyzeLongText,
+  proposeGames,
 } from "@/lib/dictionary.functions";
 import { CURAEIDON_LEXICON } from "@/lib/curaeidon-lexicon";
 import { toast } from "sonner";
@@ -26,7 +28,7 @@ type Palabra = {
   created_at: string;
 };
 
-type Tab = "diccionario" | "explorar" | "traducir" | "poemas";
+type Tab = "diccionario" | "ingesta" | "explorar" | "traducir" | "poemas" | "juegos";
 
 function DictionaryApp() {
   const navigate = useNavigate();
@@ -82,9 +84,11 @@ function DictionaryApp() {
           {(
             [
               ["diccionario", "📚 Diccionario"],
+              ["ingesta", "🧬 Ingesta masiva"],
               ["explorar", "✨ Explorar palabra"],
               ["traducir", "🔤 Traducir"],
               ["poemas", "🌙 Haikus"],
+              ["juegos", "🎲 Autocrecimiento"],
             ] as [Tab, string][]
           ).map(([id, label]) => (
             <button
@@ -104,6 +108,8 @@ function DictionaryApp() {
           {tab === "explorar" && <ExploreTab />}
           {tab === "traducir" && <TranslateTab />}
           {tab === "poemas" && <PoemsTab />}
+          {tab === "ingesta" && <IngestTab onReload={load} />}
+          {tab === "juegos" && <GamesTab />}
         </div>
 
         <div className="msn-statusbar">
