@@ -204,6 +204,121 @@ export const translateToLanguage = createServerFn({ method: "POST" })
       prompt: `Eres traductora al idioma privado de esta persona.${styleMemory(prev)} Usa SOLO palabras del diccionario cuando encajen semánticamente; para el resto conserva español natural. Prioriza sustituir sustantivos, verbos y emociones clave. No inventes palabras nuevas fuera del diccionario.\n\nDiccionario:\n${dictionaryToPrompt(dict)}\n\nTexto original:\n${data.texto}\n\nDevuélveme:\n1. **Versión traducida** (el texto mutado con las palabras del diccionario en cursivas *así*).\n2. **Glosario** de las palabras del diccionario que usaste, con su definición.\n\nNo agregues nada más.${seed()}`,
     });
     await logBitacora(context.supabase, context.userId, "traducir", data.texto, text);
+    await logBitacora(
+      context.supabase,
+      context.userId,
+      "poema",
+      `${data.forma}: ${data.tema}`,
+      text,
+    );
+    return { text };
+  });
+
+/* ─────────── Ingesta masiva de texto largo ─────────── */
+
+function chunkText(text: string, size = 9000) {
+  const chunks: string[] = [];
+  let rest = text;
+  while (rest.length > size) {
+    let cut = rest.lastIndexOf("\n", size);
+    if (cut < size * 0.5) cut = size;
+    chunks.push(rest.slice(0, cut));
+    rest = rest.slice(cut);
+  }
+  if (rest.trim()) chunks.push(rest);
+  return chunks;
+}
+
+function extractJsonArray(raw: string): any[] {
+  const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+  const start = cleaned.indexOf("[");
+  const end = cleaned.lastIndexOf("]");
+  if (start === -1 || end === -1) return [];
+  try {
+    const parsed = JSON.parse(cleaned.slice(start, end + 1));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export const analyzeLongText = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) =>
+    z.object({ texto: z.string().min(10).max(200000) }).parse(input),
+  )
+  .handler(async ({ context, data }) => {
+    const { supabase, userId } = context;
+    const provider = gateway();
+
+    const { data: existing } = await supabase
+      .from("palabras")
+      .select("palabra")
+      .eq("user_id", userId);
+    const existingSet = new Set(
+      (existing ?? []).map((r: any) => String(r.palabra).toLowerCase().trim()),
+    );
+
+    const chunks = chunkText(data.texto);
+    const seen = new Set<string>();
+    const nuevas: any[] = [];
+    let repetidas = 0;
+
+    for (const chunk of chunks) {
+      const { text } = await generateText({
+        model: provider(MODEL),
+        prompt: `Analiza este texto y extrae ÚNICAMENTE las palabras inventadas / neologismos / términos no estándar del español (ignora palabras normales, nombres propios comunes y erratas obvias).\n\nPara cada una devuelve un objeto con:\n"palabra" (la forma base, en minúsculas),\n"definicion" (si el texto la define, úsala tal cual, resumida; si no, deduce una definición breve y plausible desde el contexto),\n"categoria" (1-2 palabras en minúsculas: emoción, objeto, verbo, tiempo, cuerpo, relación, sonido, lugar, sensación, filosófico, etc.),\n"ejemplos" (una frase del texto donde aparece, o "").\n\nResponde SOLO con un array JSON válido, sin explicaciones ni markdown.\n\nTEXTO:\n${chunk}`,
+      });
+      for (const it of extractJsonArray(text)) {
+        const palabra = String(it?.palabra ?? "").trim();
+        if (!palabra || palabra.length > 60) continue;
+        const key = palabra.toLowerCase();
+        if (seen.has(key)) {
+          repetidas++;
+          continue;
+        }
+        seen.add(key);
+        if (existingSet.has(key)) {
+          repetidas++;
+          continue;
+        }
+        nuevas.push({
+          palabra,
+          definicion: String(it?.definicion ?? "").trim(),
+          categoria: String(it?.categoria ?? "sin categoría").trim().toLowerCase() || "sin categoría",
+          ejemplos: String(it?.ejemplos ?? "").trim(),
+        });
+      }
+    }
+
+    await logBitacora(
+      supabase,
+      userId,
+      "ingesta",
+      data.texto.slice(0, 2000),
+      `${nuevas.length} nuevas / ${repetidas} repetidas`,
+    );
+
+    return { nuevas, repetidas, bloques: chunks.length };
+  });
+
+/* ─────────── Autocrecimiento: propone nuevos juegos ─────────── */
+
+export const proposeGames = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ nota: z.string().default("") }).parse(input))
+  .handler(async ({ context, data }) => {
+    const dict = await fetchDictionary(context.supabase, context.userId);
+    const prev = await fetchBitacora(context.supabase, context.userId, undefined, 20);
+    const juegosPrev = prev.filter((p: any) => p.tipo === "juegos");
+    const provider = gateway();
+
+    const { text } = await generateText({
+      model: provider(MODEL),
+      prompt: `Eres el motor de autocrecimiento de un idioma privado. Observa cómo esta persona ha estado usando su diccionario y propón 4 JUEGOS o RITUALES nuevos, específicos para ELLA (no genéricos).\n\nMuestra del diccionario (${dict.length} palabras cargadas):\n${dictionaryToPrompt(dict.slice(0, 60))}\n${styleMemory(prev)}\n${data.nota ? `Deseo explícito de la persona: ${data.nota}\n` : ""}\nPara cada juego:\n**Nombre del juego** (inventado, puede usar sus propias palabras)\n• cómo se juega en 2 frases\n• un ejemplo concreto YA JUGADO con palabras reales de su diccionario\n\nAl final añade una sección "🌱 Lo que noto en tu idioma": 3 observaciones sobre patrones, huecos o direcciones de crecimiento del léxico (qué tipo de palabra le falta inventar).\n\nEspañol, íntimo, sin relleno. Markdown.${antiRepeat(juegosPrev)}${seed()}`,
+    });
+
+    await logBitacora(context.supabase, context.userId, "juegos", data.nota, text);
     return { text };
   });
 
