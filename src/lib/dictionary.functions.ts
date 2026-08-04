@@ -204,13 +204,6 @@ export const translateToLanguage = createServerFn({ method: "POST" })
       prompt: `Eres traductora al idioma privado de esta persona.${styleMemory(prev)} Usa SOLO palabras del diccionario cuando encajen semánticamente; para el resto conserva español natural. Prioriza sustituir sustantivos, verbos y emociones clave. No inventes palabras nuevas fuera del diccionario.\n\nDiccionario:\n${dictionaryToPrompt(dict)}\n\nTexto original:\n${data.texto}\n\nDevuélveme:\n1. **Versión traducida** (el texto mutado con las palabras del diccionario en cursivas *así*).\n2. **Glosario** de las palabras del diccionario que usaste, con su definición.\n\nNo agregues nada más.${seed()}`,
     });
     await logBitacora(context.supabase, context.userId, "traducir", data.texto, text);
-    await logBitacora(
-      context.supabase,
-      context.userId,
-      "poema",
-      `${data.forma}: ${data.tema}`,
-      text,
-    );
     return { text };
   });
 
